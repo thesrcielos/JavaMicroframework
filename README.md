@@ -139,6 +139,17 @@ This test is testing that the required parameters are valid
     }
 ```
 
+## Deployment
+To package the application:
+```bash
+mvn package
+```
+
+Then run the packaged JAR:
+```bash
+java -jar target/HttpServer-1.0-SNAPSHOT.jar
+```
+
 ## Javadoc
 Code documentation is available in `target/site/apidocs/index.html` after running:
 ```bash
