@@ -13,8 +13,8 @@ You will need the following installed:
 ### Installing
 Clone the repository:
 ```bash
-git clone https://github.com/thesrcielos/JavaHttpServer.git
-cd JavaHttpServer
+git clone https://github.com/thesrcielos/JavaMicroframework
+cd JavaMicroframework
 ```
 
 Build the project using Maven:
@@ -27,63 +27,68 @@ mvn clean install
 #### HTTP Server
 Start the HTTP server on port 35000:
 ```bash
-java -cp target/HttpServer-1.0-SNAPSHOT.jar org.eci.arep.HttpServer
+java -cp target/HttpServer-1.0-SNAPSHOT.jar org.eci.arep.Main
 ```
 
 The server will be available at `http://localhost:35000`
 
-#### Usage and response Example of HTTP Server
+#### Usage and response Example of Microframework
 
-
-Go to the browser and search localhost:35000
+Code example
+````
+public static void main(String[] args) throws IOException, URISyntaxException {
+        staticfiles("public");
+        get("/hello", (req, resp) -> "Hello " + req.getValues("name"));
+        get("/pi", (req, resp) -> {
+            return String.valueOf(Math.PI);
+        });
+        get("/app/hello", (req, res) -> "Hello");
+        HttpServer.run();
+    }
+````
+Go to postman and type localhost:35000/hello?name=<your-name>
 ![](/assets/img1.png)
-In the browser network panel can be found the requests made to the server
-![](/assets/img1-1.png)
-Usage of the first form with get
+Now check the Pi endpoint
 ![](/assets/img2.png)
-Http Request made and its response
-![](/assets/img2-1.png)
-Usage of the second form with post
-![](/assets/img3.png)
-Http Post request made and its response
-![](/assets/img3-1.png)
-#### Socket Examples
-Run the server socket example:
-```bash
-java -cp target/HttpServer-1.0-SNAPSHOT.jar org.eci.arep.EchoServer
-```
-
-Run the client socket example (in a separate terminal):
-```bash
-java -cp target/HttpServer-1.0-SNAPSHOT.jar org.eci.arep.EchoClient
-```
-
-#### URL Examples
-Demonstrate URL class methods:
-```bash
-java -cp target/HttpServer-1.0-SNAPSHOT.jar org.eci.arep.URLMethods
-```
-
-#### Web Page Reader
-Read and display web pages:
-```bash
-java -cp target/HttpServer-1.0-SNAPSHOT.jar org.eci.arep.URLReader
-```
 
 
 ## Features
 - **HTTP Server**: Complete HTTP/1.1 server implementation supporting GET and POST methods
-- **Socket Programming**: Examples of basic TCP socket communication between client and server
-- **URL Utilities**: Comprehensive examples of Java URL class methods
-- **Web Page Reader**: Utility to fetch web content
-- **Static File Serving**: Serves HTML, CSS, JS, and image files from the `public/` directory
+- **GET Method HTTP**: A simple way to create a get endpoint of HTTP
+- **Static File Serving**: Serves HTML, CSS, JS, and image files from the directory you specify
 
-## API Endpoints
-The HTTP server supports the following endpoints:
-- `GET /` - Serves index.html from public directory
-- `GET /*` - Serves static files (HTML, CSS, JS, images)
-- `POST /app/hellopost?name=<name>` - Return an greeting message
-- `GET /app/hello?name=<name>` - Return an greeting message
+## Diseño de la clase HttpServer
+
+La clase HttpServer implementa un servidor web ligero utilizando la librería estándar de Java, específicamente el paquete java.net.ServerSocket. El objetivo de esta clase es brindar una infraestructura básica para:
+Servir archivos estáticos desde un directorio definido por el usuario.
+Atender solicitudes dinámicas mediante funciones registradas en tiempo de ejecución.
+Proporcionar un mecanismo extensible para la construcción de aplicaciones web simples sin necesidad de frameworks adicionales.
+
+### Responsabilidades de la clase
+
+La clase HttpServer asume las siguientes responsabilidades:
+Gestión de conexiones: escuchar en un puerto determinado (35000) y aceptar clientes entrantes.
+Procesamiento de solicitudes HTTP: parsear la línea de petición (método, URI y versión HTTP) así como las cabeceras asociadas.
+Resolución de recursos:
+Buscar archivos estáticos en el directorio raíz definido.
+Delegar en controladores dinámicos si no se encuentra un archivo.
+Generación de respuestas: construir objetos HttpResponse con código de estado, cabeceras y cuerpo.
+Extensibilidad: permitir el registro de servicios dinámicos asociados a rutas específicas.
+
+### Métodos de configuración
+
+get(String path, HttpService service)
+Registra un servicio dinámico que será invocado cuando el servidor reciba una solicitud a la ruta especificada.
+
+staticfiles(String path)
+Establece el directorio raíz de archivos estáticos.
+
+### Métodos de ejecución
+run()
+Inicia el servidor en el puerto 35000, acepta conexiones y procesa las solicitudes entrantes en un ciclo indefinido.
+
+main(String[] args)
+Método de entrada que invoca la ejecución del servidor.
 
 ## Usage Examples
 
@@ -92,14 +97,6 @@ The HTTP server supports the following endpoints:
 curl http://localhost:35000/
 ```
 
-### POST Request
-```bash
-curl -X POST http://localhost:35000/app/hellopost?name=diego
-```
-Example output
-```
-{"msg": "Hello diego"}
-```
 ### Coding Style
 The code follows the Google Java Style Guide and was formatted accordingly using Maven Checkstyle plugin.
 
@@ -116,29 +113,30 @@ Some of the things that are being tested are:
 * Http Server serves static files
 * Http Response structure 
 * Http Server API Endpoints
-* Server validations
 
 Example:
 This test is testing that the required parameters are valid
 
 ```
 @Test
-void testMalformedQueryParameter() throws Exception {
-    URI malformedUri = new URI("/app/hello?nameJohn");
-    String response = HttpServer.helloService(malformedUri);
-    assertTrue(response.contains("HTTP/1.1 400 Bad Request"));
-    assertTrue(response.contains("Name not found"));
-}
-```
-## Deployment
-To package the application:
-```bash
-mvn package
-```
+    void testHandleDynamicRequest_Found() throws Exception {
+        HttpServer.get("/hello", (req, resp) -> "Hello " + req.getValues("name"));
 
-Then run the packaged JAR:
-```bash
-java -jar target/HttpServer-1.0-SNAPSHOT.jar
+        HttpRequest request = new HttpRequest();
+        request.setUri(new URI("/hello?name=Diego"));
+
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        Socket mockSocket = mock(Socket.class);
+        when(mockSocket.getOutputStream()).thenReturn(outputStream);
+
+        HttpServer.handleDynamicRequest(mockSocket, request);
+
+        String response = outputStream.toString();
+        assertTrue(response.contains("200 OK"));
+        assertTrue(response.contains("Hello Diego"));
+
+        verify(mockSocket, times(1)).getOutputStream();
+    }
 ```
 
 ## Javadoc
@@ -161,8 +159,3 @@ Please read **CONTRIBUTING.md** for details on our code of conduct and the proce
 
 ## License
 This project is licensed under the MIT License – see the [LICENSE.md](LICENSE.md) file for details.
-
-## Acknowledgments
-* Inspired by understanding HTTP protocol fundamentals
-* Socket programming concepts from Java networking documentation
-* HTTP/1.1 specification

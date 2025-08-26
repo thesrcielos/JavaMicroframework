@@ -61,7 +61,6 @@ public class HttpServer {
                         request.addHeader(headerParts[0].trim(), headerParts[1].trim());
                     }
                 }
-                System.out.println("Received: " + inputLine);
                 if (!in.ready()) {
                     break;
                 }
@@ -82,6 +81,7 @@ public class HttpServer {
     public static void handleDynamicRequest(Socket clientSocket, HttpRequest request) throws IOException {
         HttpResponse response = new HttpResponse();
         URI requestUri = request.getUri();
+
         HttpService handler = services.get(requestUri.getPath());
 
         if (handler != null) {
